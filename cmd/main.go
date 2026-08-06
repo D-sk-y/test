@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"test/pkg/mod"
 )
 
 func main() {
@@ -16,6 +18,14 @@ func main() {
 	// 创建一个可取消的上下文
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// 初始化消息
+	message := mod.NewMessage("main", "init")
+	fmt.Println("Message: ", message.Name, message.Msg, message.Time)
+
+	// 初始数系统
+	system := mod.NewSystem(ctx, cancel)
+	fmt.Println("System initialized with context:", system.GetContext())
 
 	// 初始化
 	go initialize(ctx)
