@@ -5,6 +5,8 @@ build/
 # Go 测试二进制
 *.test
 *.out
+*.mod
+*.sum
 
 # IDE 与编辑器
 .vscode/

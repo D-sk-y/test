@@ -9,10 +9,25 @@ import (
 	"time"
 
 	"test/pkg/api"
+	"test/pkg/config"
 	"test/pkg/mod"
+
+	"github.com/jmoiron/sqlx"
 )
 
 func main() {
+	// 读取配置文件
+	config := config.NewConfig()
+	db, err := sqlx.Connect(config.DB.Driver, fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
+		config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port, config.DB.Name))
+	if err != nil {
+		panic(err)
+	}
+
+	// 连接池配置
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	fmt.Println("App Start:", time.Now().Format("2006-01-02 15:04:05"))
 
