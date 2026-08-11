@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -19,7 +20,12 @@ type Config struct {
 }
 
 func NewConfig() *Config {
-	data, err := os.ReadFile("config.yaml")
+	execPath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	configPath := filepath.Join(filepath.Dir(execPath), "conf", "config.yaml")
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		panic(err)
 	}

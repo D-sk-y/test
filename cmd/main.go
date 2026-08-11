@@ -6,11 +6,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
-
 	"test/pkg/api"
 	"test/pkg/config"
 	"test/pkg/mod"
+	"time"
+
+	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -64,7 +65,6 @@ func main() {
 
 	// 取消上下文，通知所有模块退出
 	deinitialize(modeules)
-	fmt.Println("App PowerOff")
 }
 
 func initialize(ctx context.Context, modules *mod.ModuleBase) {
@@ -87,5 +87,6 @@ func initialize(ctx context.Context, modules *mod.ModuleBase) {
 }
 
 func deinitialize(modules *mod.ModuleBase) {
+	fmt.Println("App PowerOff")
 	modules.DeInitializeAll()
 }

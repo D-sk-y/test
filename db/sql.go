@@ -13,3 +13,7 @@ func NewDB(db *sqlx.DB) *DB {
 		db: db,
 	}
 }
+
+func (db *DB) Close() error {
+	return db.db.Close()
+}
