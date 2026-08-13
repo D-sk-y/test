@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"test/db"
 	"test/pkg/mod"
 	"time"
 
@@ -15,14 +16,14 @@ type Gateway struct {
 	bus    *mod.Bus
 	ctx    context.Context
 	server *http.Server
-	store  *mod.Store
+	db     *db.DB
 }
 
-func NewGateway(bus *mod.Bus, ctx context.Context) *Gateway {
+func NewGateway(bus *mod.Bus, ctx context.Context, db *db.DB) *Gateway {
 	return &Gateway{
-		bus:   bus,
-		ctx:   ctx,
-		store: mod.NewStore(),
+		bus: bus,
+		ctx: ctx,
+		db:  db,
 	}
 }
 
@@ -33,8 +34,8 @@ func (g *Gateway) GetContext() context.Context {
 func (g *Gateway) Initialize(c context.Context) error {
 	fmt.Println("Gateway initialized with context:", g.GetContext())
 	mux := http.NewServeMux()
-	v1.NewHandler(g.store).RegisterRoutes(mux)
-	v2.NewHandler(g.store).RegisterRoutes(mux)
+	v1.NewHandler(g.db).RegisterRoutes(mux)
+	v2.NewHandler(g.db).RegisterRoutes(mux)
 	g.server = &http.Server{Addr: ":18080", Handler: mux}
 	go func() {
 		fmt.Println("HTTP server listening on :18080")

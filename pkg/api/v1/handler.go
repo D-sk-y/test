@@ -10,99 +10,92 @@ package v1
 import (
 	"encoding/json"
 	"net/http"
-
-	"test/pkg/mod"
+	"strconv"
+	"test/db"
+	"test/entity"
 )
 
 type Handler struct {
-	store *mod.Store
+	db *db.DB
 }
 
-func NewHandler(store *mod.Store) *Handler {
-	return &Handler{store: store}
+func NewHandler(db *db.DB) *Handler {
+	return &Handler{
+		db: db,
+	}
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// URL 全是名词，HTTP 方法区分语义
 	mux.HandleFunc("GET    /api/v1/tasks", h.listTasks)
 	mux.HandleFunc("POST   /api/v1/tasks", h.createTask)
-	mux.HandleFunc("GET    /api/v1/tasks/{id}", h.getTask)
+	// mux.HandleFunc("GET    /api/v1/tasks/{id}", h.getTask)
 	mux.HandleFunc("PUT    /api/v1/tasks/{id}", h.updateTask)
-	mux.HandleFunc("DELETE /api/v1/tasks/{id}", h.deleteTask)
+	// mux.HandleFunc("DELETE /api/v1/tasks/{id}", h.deleteTask)
 }
 
 // ========== Handler ==========
 
 func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, h.store.List())
+	tasks, err := h.db.GetTasks()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tasks)
 }
 
 func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Name == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
+	var task entity.Task
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	task := h.store.Create(body.Name)
-	writeJSON(w, http.StatusCreated, task)
-}
-
-func (h *Handler) getTask(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	task, err := h.store.Get(id)
+	// 获取新值
+	var newTask entity.Task
+	newTask, err := h.db.CreateTask(&task)
 	if err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, task)
+	w.Header().Set("Content-Type", "application/json")
+	// 返回新值
+	json.NewEncoder(w).Encode(newTask)
 }
 
 func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	// 从路径参数中获取 ID
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// body 解析为 task
 	var body struct {
+		ID     int64  `json:"id"`
 		Name   string `json:"name"`
 		Status string `json:"status"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON")
+	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	task, err := h.store.Update(id, body.Name, body.Status)
+
+	if id == 0 && body.ID != 0 {
+		id = body.ID
+	}
+
+	task := entity.Task{
+		ID:     id,
+		Name:   body.Name,
+		Status: body.Status,
+	}
+	err = h.db.UpdateTask(&task)
 	if err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, task)
-}
-
-func (h *Handler) deleteTask(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if err := h.store.Delete(id); err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"id": id, "deleted": "true"})
-}
-
-// ========== 响应工具 ==========
-
-func writeJSON(w http.ResponseWriter, code int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]any{
-		"code":    0,
-		"message": "ok",
-		"data":    data,
-	})
-}
-
-func writeError(w http.ResponseWriter, code int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]any{
-		"code":    code,
-		"message": msg,
-	})
+	w.WriteHeader(http.StatusOK)
 }

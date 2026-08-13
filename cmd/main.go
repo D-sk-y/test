@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"test/db"
 	"test/pkg/api"
 	"test/pkg/config"
 	"test/pkg/mod"
@@ -19,16 +20,16 @@ import (
 func main() {
 	// 读取配置文件
 	config := config.NewConfig()
-	db, err := sqlx.Connect(config.DB.Driver, fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
+	ddb, err := sqlx.Connect(config.DB.Driver, fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
 		config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port, config.DB.Name))
 	if err != nil {
 		panic(err)
 	}
 
 	// 连接池配置
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	ddb.SetMaxOpenConns(25)
+	ddb.SetMaxIdleConns(5)
+	ddb.SetConnMaxLifetime(5 * time.Minute)
 
 	fmt.Println("App Start:", time.Now().Format("2006-01-02 15:04:05"))
 
@@ -42,6 +43,8 @@ func main() {
 	message := mod.NewMessage("main", "init")
 	fmt.Println("Message: ", message.Name, message.Msg, message.Time)
 
+	// 初始化数据库
+	mydb := db.NewDB(ddb)
 	// 初始化消息总线
 	bus := mod.GetBus()
 	// 初始数系统
@@ -49,7 +52,7 @@ func main() {
 	// 初始化牛马
 	worker := mod.NewWorker(bus, ctx, cancel)
 	// 初始化api网关
-	gateway := api.NewGateway(bus, ctx)
+	gateway := api.NewGateway(bus, ctx, mydb)
 
 	modeules.SetModule("ApiGateway", gateway)
 	modeules.SetModule("System", system)
