@@ -9,8 +9,10 @@
 package v2
 
 import (
+	"encoding/json"
 	"net/http"
 	"test/db"
+	"test/pkg/mod"
 )
 
 type Handler struct {
@@ -30,7 +32,23 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// mux.HandleFunc("POST /api/v2/getTask", h.getTask)
 	// mux.HandleFunc("POST /api/v2/updateTask", h.updateTask)
 	// mux.HandleFunc("POST /api/v2/deleteTask", h.deleteTask)
+	mux.HandleFunc("POST /api/v2/hello", h.hello)
 }
 
 // ========== Handler ==========
 // 注意：URL 语义和 v1 完全相反。v1 是 GET /tasks，v2 是 POST /listTasks
+
+func (h *Handler) hello(w http.ResponseWriter, r *http.Request) {
+	var msg mod.Message
+	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	bus := mod.GetBus()
+	bus.CreateMsg(msg)
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+}
