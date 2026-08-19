@@ -1,0 +1,36 @@
+.text {
+    font-size: 30px;
+    color: rgb(54, 52, 50);
+}
+
+.HomeBackground {
+    background-color: aqua;
+    height: 100%;
+    width: 100%;
+}
+
+.square {
+    width: 50px;
+    height: 50px;
+    background-color: #fff;
+    padding: 0;
+    font-size: 24px;
+    color: black;
+
+}
+
+.square:active {
+    transform: translateY(1px);
+}
+
+.row {
+    /* 行内按钮不再被换行空格/基线影响 */
+    display: flex;
+}
+
+.board {
+    /*  宽度收缩为内容实际宽度 */
+    width: fit-content;
+    /* 居中显示 */
+    margin: 0 auto;
+}
